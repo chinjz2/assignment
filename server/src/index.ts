@@ -3,6 +3,7 @@ import swaggerDocs from "./utils/swagger";
 import bodyParser from "body-parser";
 import cors from "cors";
 import express, { Express, Request, Response } from "express";
+import routes from "./route";
 dotenv.config();
 
 const PORT: number = parseInt((process.env.PORT || "3001") as string, 10);
@@ -20,6 +21,7 @@ app.use(
 );
 swaggerDocs(app);
 
+app.use(routes);
 app.all("*", (req: Request, res: Response) => {
   res.sendStatus(404);
 });
