@@ -34,6 +34,8 @@ export async function uploadUsersHandler(
   try {
     const { name, currentChunkIndex, totalChunks, id }: uploadQueryProps =
       req.query;
+    const ext = name.split(".").pop();
+    if (ext !== "csv") return res.sendStatus(400);
     const uploadStatus = await getUploadStatus();
     if (
       !uploadStatus ||
@@ -50,9 +52,10 @@ export async function uploadUsersHandler(
     const firstChunk = parseInt(currentChunkIndex as string) === 0;
     const lastChunk =
       parseInt(currentChunkIndex as string) === parseInt(totalChunks) - 1;
-    const ext = name.split(".").pop();
+
     const data = req.body.toString().split(",")[1];
     const buffer = Buffer.from(data, "base64");
+
     const tmpFilename = "tmp_" + md5(name + req.ip) + "." + ext;
     if (firstChunk && fs.existsSync("./uploads/" + tmpFilename)) {
       fs.unlinkSync("./uploads/" + tmpFilename);

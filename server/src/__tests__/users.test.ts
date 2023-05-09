@@ -2,6 +2,7 @@ import supertest from "supertest";
 import createServer from "~/utils/server";
 import { prisma } from "~/utils/db";
 import type { User } from "@prisma/client";
+import fs from "fs";
 
 const app = createServer();
 const dummyUser: User = {
@@ -222,6 +223,43 @@ describe("user", () => {
         expect(statusCode).toBe(200);
         expect(body).toBe(null);
       });
+    });
+    describe("given a png file", () => {
+      it("should reject file", async () => {
+        const { statusCode } = await supertest(app)
+          .post(
+            "/users/uploadUserFile?name=test-upload_image.png&currentChunkIndex=0&totalChunks=1&id=0"
+          )
+          .attach("test-upload_image", "./uploads/test-upload_image.png");
+        expect(statusCode).toBe(400);
+      });
+    });
+    describe("given a two concurrent uploads", () => {
+      it("only one should pass, the other should fail", async () => {
+        const buffer = Buffer.from(
+          "data:application/octet-stream;base64," +
+            fs.readFileSync("./uploads/test-concurrent-upload.csv", "base64")
+        );
+        const { body, statusCode } = await supertest(app)
+          .post(
+            "/users/uploadUserFile?name=test-concurrent-upload.csv&currentChunkIndex=0&totalChunks=1&id=0"
+          )
+          .set("Content-Type", "multipart/form-data")
+          .send(buffer);
+        expect(statusCode).toBe(200);
+        let intervalId = setInterval(() => {
+          supertest(app)
+            .post(
+              "/users/uploadUserFile?name=test-concurrent-upload.csv&currentChunkIndex=0&totalChunks=0&id=0"
+            )
+            .set("Content-Type", "multipart/form-data")
+            .send(buffer)
+            .expect(403);
+        }, 1000);
+        clearInterval(intervalId);
+
+        fs.unlinkSync("./uploads/" + body.name);
+      }, 10000);
     });
   });
 });
