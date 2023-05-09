@@ -12,11 +12,10 @@ datasource db {
 
 model User {
   id String @id
-  login String
+  login String @unique
   name String
   salary Float
   createdAt DateTime
-  @@unique([id, login])
 }
 
 model UploadStatus {

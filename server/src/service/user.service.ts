@@ -54,54 +54,92 @@ const processCSVFile = async (
   fileName: string,
   time: Date,
   prisma: any
-): Promise<csvRowProps[]> => {
+): Promise<string> => {
   return new Promise((resolve, reject) => {
-    const dataFull: csvRowProps[] = [];
+    const promiseTracker = new Set();
     const fileStream = fs.createReadStream(`./uploads/${fileName}`);
-    parseStream(fileStream, { headers: true })
+    parseStream(fileStream, { headers: true, strictColumnHandling: true })
       .on("data", async function (data: csvRowProps) {
-        if (data.salary < 0.0) return reject("Invalid salary");
-        if (data.id[0] != "#") dataFull.push(data);
+        try {
+          if (data.salary < 0.0) throw new Error("Invalid salary");
+          if (data.id[0] !== "#") {
+            promiseTracker.add(data.id);
+            await prisma.user.upsert({
+              where: {
+                id: data.id,
+              },
+              create: {
+                id: data.id,
+                login: data.login,
+                name: data.name,
+                salary: +data.salary,
+                createdAt: new Date(time),
+              },
+              update: {
+                login: data.login,
+                name: data.name,
+                salary: +data.salary,
+              },
+            });
+            promiseTracker.delete(data.id);
+          }
+        } catch (err) {
+          await prisma.$queryRaw`ROLLBACK`;
+          reject("Invalid Entry");
+        }
+      })
+      .on("data-invalid", (row, rowNumber) => {
+        reject("Invalid columns");
       })
       .on("error", (err) => {
         reject(err);
       })
       .on("end", () => {
-        resolve(dataFull);
+        let interval: NodeJS.Timeout | undefined = undefined;
+        const checkPromisesCompleted = () => {
+          if (promiseTracker.size === 0) {
+            if (interval) clearInterval(interval);
+            resolve("Success");
+            return;
+          }
+        };
+        checkPromisesCompleted();
+        setInterval(checkPromisesCompleted, 200);
+        setTimeout(() => {
+          if (interval) clearInterval(interval);
+          reject("Timeout");
+        }, 5000);
       });
   });
 };
-export async function createUsers(fileName: string, time: Date): Promise<void> {
+export async function createUsers(
+  fileName: string,
+  time: Date
+): Promise<number> {
   try {
-    const data: csvRowProps[] = await processCSVFile(fileName, time, prisma);
-    for (const cData of data) {
-      await prisma.user.upsert({
-        where: {
-          id: cData.id,
-        },
-        create: {
-          id: cData.id,
-          login: cData.login,
-          name: cData.name,
-          salary: +cData.salary,
-          createdAt: new Date(time),
-        },
-        update: {
-          login: cData.login,
-          name: cData.name,
-          salary: +cData.salary,
-        },
-      });
-    }
+    const resp = await prisma.$transaction(async (prisma) => {
+      try {
+        const res = await processCSVFile(fileName, time, prisma);
+        return res;
+      } catch (err) {
+        await prisma.$queryRaw`ROLLBACK`;
+        return err;
+      }
+    });
+    if (resp !== "Success") return 400;
+    return 200;
   } catch (err) {
-    console.log(err);
     throw err;
   }
 }
 export async function createUser(user: User): Promise<User> {
   return prisma.user.create({
     data: {
-      ...user,
+      id: user.id,
+      login: user.login,
+      name: user.name,
+      salary: +user.salary,
+      createdAt: user.createdAt,
     },
   });
 }

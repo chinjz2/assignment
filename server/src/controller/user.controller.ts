@@ -11,6 +11,7 @@ import {
   updateUploadStatus,
 } from "~/service/uploadStatus.service";
 import { Request, Response } from "express";
+import type { User } from "@prisma/client";
 
 import fs from "fs";
 import md5 from "md5";
@@ -19,6 +20,9 @@ interface uploadQueryProps {
   name: string;
   currentChunkIndex: string;
   totalChunks: string;
+  id: string;
+}
+interface queryProps {
   id: string;
 }
 const fileTimeout = 60000;
@@ -69,19 +73,49 @@ export async function uploadUsersHandler(
 }
 export async function createUsersHandler(req: Request, res: Response) {
   try {
-    const { fileName, time } = req.body;
-    await createUsers(fileName, time);
-    res.sendStatus(200);
+    const { fileName, time }: { fileName: string; time: Date } = req.body;
+    const resp: number = await createUsers(fileName, time);
+    res.sendStatus(resp);
   } catch (err) {
     return res.sendStatus(400);
   }
 }
-export async function getAllUsersHandler(req: Request, res: Response) {
-  console.log("getAllUsersHandler");
+export async function getAllUsersHandler(req: Request, res: Response) {}
+export async function getOneUserHandler(
+  req: Request<queryProps, {}, {}, {}>,
+  res: Response
+) {
+  try {
+    const { id }: queryProps = req.params;
+    const resp = await getUser(id);
+    res.status(200).json(resp);
+  } catch (err) {
+    console.log("err", err);
+    return res.sendStatus(400);
+  }
 }
-export async function getOneUserHandler(req: Request, res: Response) {
-  console.log("getOneUserHandler");
+export async function createUserHandler(req: Request, res: Response) {
+  try {
+    const { user }: { user: User } = req.body;
+    const resp = await createUser(user);
+    res.status(200).json(resp);
+  } catch (err) {
+    console.log("err", err);
+    return res.sendStatus(400);
+  }
 }
-export async function createUserHandler(req: Request, res: Response) {}
 export async function updateUserHandler(req: Request, res: Response) {}
-export async function deleteUserHandler(req: Request, res: Response) {}
+
+export async function deleteUserHandler(
+  req: Request<queryProps, {}, {}, {}>,
+  res: Response
+) {
+  try {
+    const { id }: queryProps = req.params;
+    await deleteUser(id);
+    res.sendStatus(200);
+  } catch (err) {
+    console.log("err", err);
+    return res.sendStatus(400);
+  }
+}
