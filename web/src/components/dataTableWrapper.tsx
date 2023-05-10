@@ -1,5 +1,4 @@
 import { FC, useCallback } from "react";
-
 import { EmployeeData } from "~/types";
 import MUIDataTable, {
   MUIDataTableState,
@@ -13,6 +12,7 @@ interface DataTableWrapperProps {
   title: string;
   sortOrder: MUISortOptions;
   limit: number;
+  page: number;
 }
 const columns = ["id", "login", "name", "salary"];
 export const DataTableWrapper: FC<DataTableWrapperProps> = ({
@@ -22,6 +22,7 @@ export const DataTableWrapper: FC<DataTableWrapperProps> = ({
   title,
   sortOrder,
   limit,
+  page,
 }) => {
   const onTableChange = useCallback(
     (action: string, tableState: MUIDataTableState) => {
@@ -52,9 +53,10 @@ export const DataTableWrapper: FC<DataTableWrapperProps> = ({
     sortOrder: sortOrder,
     rowsPerPage: limit,
     rowsPerPageOptions: [limit],
+    page: page,
   };
   return (
-    <div className="">
+    <div className="w-full">
       <MUIDataTable
         title={title}
         data={data.data}

@@ -40,23 +40,26 @@ export default function UploadPage() {
   }, [salaryRange, currentPage, sortInfo]);
   const onSearchClick = (minSalary: number, maxSalary: number) => {
     setSalaryRange({ minSalary: minSalary, maxSalary: maxSalary });
-
+    setCurrentPage(0);
     fetch(
-      `http://localhost:3001/users?minSalary=${minSalary}&maxSalary=${maxSalary}&offset=${
-        currentPage * limit
-      }&limit=${limit}&sort=${getDirSymbol(sortInfo.direction)}${sortInfo.name}`
+      `http://localhost:3001/users?minSalary=${minSalary}&maxSalary=${maxSalary}&offset=0&limit=${limit}&sort=${getDirSymbol(
+        sortInfo.direction
+      )}${sortInfo.name}`
     )
       .then((resp) => resp.json())
       .then((data) => setData(data));
   };
   const onColumnsClick = (sortOpt: MUISortOptions) => {
     setSortInfo(sortOpt);
+    setCurrentPage(0);
     fetch(
       `http://localhost:3001/users?minSalary=${
         salaryRange.minSalary
-      }&maxSalary=${salaryRange.maxSalary}&offset=${
-        currentPage * limit
-      }&limit=${limit}&sort=${getDirSymbol(sortOpt.direction)}${sortOpt.name}`
+      }&maxSalary=${
+        salaryRange.maxSalary
+      }&offset=0&limit=${limit}&sort=${getDirSymbol(sortOpt.direction)}${
+        sortOpt.name
+      }`
     )
       .then((resp) => resp.json())
       .then((data) => setData(data));
@@ -85,6 +88,7 @@ export default function UploadPage() {
           title={`Employee ${salaryRangeText}`}
           sortOrder={sortInfo}
           limit={limit}
+          page={currentPage}
         />
       </div>
     </main>
