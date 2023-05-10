@@ -1,6 +1,28 @@
 import * as z from "zod";
 import { User } from "@prisma/client";
 
+/**
+ * @openapi
+ * components:
+ *   schema:
+ *     Users:
+ *       type: object
+ *       required:
+ *        - id
+ *        - login
+ *        - name
+ *        - salary
+ *       properties:
+ *         id:
+ *           type: string
+ *         login:
+ *           type: string
+ *         name:
+ *           type: string
+ *         salary:
+ *           type: number
+ */
+
 type user = Omit<User, "createdAt">;
 const userEnum = z.enum([
   "+id",

@@ -9,8 +9,22 @@ const options: swaggerJsdoc.Options = {
       title: "REST API Docs",
       version: "1.0.0",
     },
+    components: {
+      securitySchemas: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+        },
+      },
+    },
+    security: [
+      {
+        bearerAuth: [],
+      },
+    ],
   },
-  apis: ["./src/routes.ts", "./src/schema/*.ts"],
+  apis: ["./src/route/*.ts", "./src/schema/*.ts"],
 };
 
 const swaggerSpec = swaggerJsdoc(options);
