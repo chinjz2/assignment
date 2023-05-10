@@ -2,31 +2,38 @@ import router, { Router } from "express";
 import bodyParser from "body-parser";
 import validate from "~/middleware/validateResource";
 import {
-  createUsersHandler,
+  uploadUsersFromFileHandler,
   getAllUsersHandler,
   getOneUserHandler,
   createUserHandler,
-  updateUserHandler,
   deleteUserHandler,
-  uploadUsersHandler,
+  uploadUserFileHandler,
 } from "~/controller/user.controller";
-import { getAllUsersSchema } from "~/schema/user.schema";
+import {
+  getAllUsersSchema,
+  uploadUsersFromFileSchema,
+  uploadUserFileSchema,
+} from "~/schema/user.schema";
 
 const routes: Router = router();
 
-routes.route("/upload").post(createUsersHandler);
+routes
+  .route("/upload")
+  .post(validate(uploadUsersFromFileSchema), uploadUsersFromFileHandler);
 routes
   .route("/uploadUserFile")
   .post(
-    bodyParser.raw({ limit: "50mb", type: () => true }),
-    uploadUsersHandler
+    [
+      bodyParser.raw({ limit: "50mb", type: () => true }),
+      validate(uploadUserFileSchema),
+    ],
+    uploadUserFileHandler
   );
 routes.route("/").get(validate(getAllUsersSchema), getAllUsersHandler);
 routes
   .route("/:id")
   .get(getOneUserHandler)
   .post(createUserHandler)
-  .patch(updateUserHandler)
   .delete(deleteUserHandler);
 
 export default routes;

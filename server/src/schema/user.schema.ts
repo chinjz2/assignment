@@ -13,6 +13,29 @@ const userEnum = z.enum([
   "-salary",
 ]);
 
+export const uploadUserFileSchema = z.object({
+  query: z.object({
+    name: z.string(),
+    currentChunkIndex: z
+      .string()
+      .refine((val) => !isNaN(parseInt(val)) && parseInt(val) >= 0, {
+        message: "invalid number",
+      }),
+    totalChunks: z
+      .string()
+      .refine((val) => !isNaN(parseInt(val)) && parseInt(val) >= 0, {
+        message: "invalid number",
+      }),
+    id: z.string(),
+  }),
+});
+export const uploadUsersFromFileSchema = z.object({
+  body: z.object({
+    fileName: z.string(),
+    time: z.coerce.date(),
+  }),
+});
+
 export const getAllUsersSchema = z.object({
   query: z.object({
     minSalary: z
@@ -38,4 +61,8 @@ export const getAllUsersSchema = z.object({
     sort: userEnum,
   }),
 });
+export type uploadUserFileInput = z.TypeOf<typeof uploadUserFileSchema>;
+export type uploadUsersFromFileInput = z.TypeOf<
+  typeof uploadUsersFromFileSchema
+>;
 export type GetAllUsersInput = z.TypeOf<typeof getAllUsersSchema>;

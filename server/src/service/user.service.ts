@@ -58,7 +58,7 @@ const processCSVFile = async (
           reject("Invalid Entry");
         }
       })
-      .on("data-invalid", (row, rowNumber) => {
+      .on("data-invalid", () => {
         reject("Invalid columns");
       })
       .on("error", (err) => {
@@ -117,20 +117,6 @@ export async function createUser(user: User): Promise<User> {
       salary: +user.salary,
       createdAt: user.createdAt,
     },
-  });
-}
-export async function updateUser({
-  id,
-  fields,
-}: {
-  id: string;
-  fields: [];
-}): Promise<User> {
-  return prisma.user.update({
-    where: {
-      id,
-    },
-    data: {},
   });
 }
 export async function deleteUser(id: string): Promise<void> {

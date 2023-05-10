@@ -1,3 +1,4 @@
+import { RequestHandler } from "express";
 import {
   getAllUsers,
   getUser,
@@ -11,30 +12,24 @@ import {
 } from "~/controller/upload.controller";
 import { Request, Response } from "express";
 import type { User } from "@prisma/client";
-import { GetAllUsersInput } from "~/schema/user.schema";
+import {
+  GetAllUsersInput,
+  uploadUsersFromFileInput,
+  uploadUserFileInput,
+} from "~/schema/user.schema";
 
 import fs from "fs";
 import md5 from "md5";
 
-interface uploadQueryProps {
-  name: string;
-  currentChunkIndex: string;
-  totalChunks: string;
-  id: string;
-}
-function sleep(ms: number) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
-}
-export async function uploadUsersHandler(
-  req: Request<{}, {}, {}, uploadQueryProps>,
-  res: Response
-) {
+export const uploadUserFileHandler: RequestHandler<
+  {},
+  {},
+  {},
+  uploadUserFileInput["query"]
+> = async (req, res) => {
   try {
-    const { name, currentChunkIndex, totalChunks, id }: uploadQueryProps =
-      req.query;
-    const ext = name.split(".").pop();
+    const { name, currentChunkIndex, totalChunks, id } = req.query;
+    const ext = name!.split(".").pop();
     if (ext !== "csv") return res.sendStatus(400);
     const uploadStatus = await getUploadLockHandler(id);
     if (!uploadStatus) return res.sendStatus(403);
@@ -62,10 +57,13 @@ export async function uploadUsersHandler(
   } catch (err) {
     console.log(err);
   }
-}
-export async function createUsersHandler(req: Request, res: Response) {
+};
+export async function uploadUsersFromFileHandler(
+  req: Request<{}, {}, uploadUsersFromFileInput["body"]>,
+  res: Response
+) {
   try {
-    const { fileName, time }: { fileName: string; time: Date } = req.body;
+    const { fileName, time } = req.body;
     const resp: number = await createUsers(fileName, time);
     res.sendStatus(resp);
   } catch (err) {
@@ -95,8 +93,6 @@ export async function createUserHandler(req: Request, res: Response) {
     return res.sendStatus(400);
   }
 }
-export async function updateUserHandler(req: Request, res: Response) {}
-
 export async function deleteUserHandler(
   req: Request<{ id: string }, {}, {}, {}>,
   res: Response
@@ -110,37 +106,34 @@ export async function deleteUserHandler(
     return res.sendStatus(400);
   }
 }
-export async function getAllUsersHandler(
-  req: Request<GetAllUsersInput["query"]>,
-  res: Response
-) {
+export const getAllUsersHandler: RequestHandler<
+  {},
+  {},
+  {},
+  GetAllUsersInput["query"]
+> = async (req, res) => {
   try {
     const { minSalary, maxSalary, offset, limit, sort } = req.query;
-    const minSalaryStr: string = minSalary as string;
-    const maxSalaryStr: string = maxSalary as string;
-    const offsetStr: string = offset as string;
-    const limitStr: string = limit as string;
-    const sortStr: string = sort as string;
 
     let whereQuery = {};
     let sortQuery = {};
-    if (parseInt(minSalaryStr) <= parseInt(maxSalaryStr)) {
+    if (parseInt(minSalary) <= parseInt(maxSalary)) {
       whereQuery = {
         salary: {
-          lte: parseInt(maxSalaryStr),
-          gte: parseInt(minSalaryStr),
+          lte: parseInt(maxSalary),
+          gte: parseInt(minSalary),
         },
       };
     }
-    if (sortStr.length > 0) {
-      const order = sortStr[0] === "+" ? "asc" : "desc";
+    if (sort.length > 0) {
+      const order = sort[0] === "+" ? "asc" : "desc";
       sortQuery = {
-        [`${sortStr.substring(1)}`]: order,
+        [`${sort.substring(1)}`]: order,
       };
     }
     const resp = await getAllUsers(
-      parseInt(offsetStr),
-      parseInt(limitStr),
+      parseInt(offset),
+      parseInt(limit),
       whereQuery,
       sortQuery
     );
@@ -149,4 +142,4 @@ export async function getAllUsersHandler(
     console.log("err", err);
     return res.sendStatus(400);
   }
-}
+};
