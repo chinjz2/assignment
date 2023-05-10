@@ -7,7 +7,7 @@ import { SuccessToast, ErrorToast } from "./toast";
 import { ToastContainer } from "react-toastify";
 import uuid from "react-uuid";
 
-const chunkSize: number = 10 * 1024;
+const chunkSize: number = 512;
 
 export function UploadDropZone() {
   const [file, setFile] = useState<Blob[]>([]);
