@@ -27,6 +27,8 @@ start development server
 npm run dev
 ```
 
+Runs on localhost:3001
+
 ### Frontend
 
 install dependencies using npm
@@ -40,3 +42,16 @@ start web application
 ```
 npm run dev
 ```
+
+Runs on localhost:3000
+
+## Afterword
+
+> This app is using the unstable releases for Next.js 13 and React 18. There has been some performance issue ongoing with both of them since they are both not production ready.
+
+> Expect some small lag at the start.
+
+If there are any questions regarding my choice of implementation or libraries/tools or anything at all
+feel free to reach out to me @ nicholas.chinjz2@gmail.com.
+
+Thanks.
