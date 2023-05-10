@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { DropZoneWrapper } from "./dropZoneWrapper";
 import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
 import { SuccessToast, ErrorToast } from "./toast";
 import { ToastContainer } from "react-toastify";
 import uuid from "react-uuid";
@@ -98,7 +99,7 @@ export function UploadDropZone() {
                 (currentChunkIndex / Math.ceil(file[0].size / chunkSize)) * 100
               ),
               0
-            ).toString()
+            ).toString() + "%"
           );
         }
       } catch (err) {
@@ -146,17 +147,22 @@ export function UploadDropZone() {
         }}
         noClick={true}
         onDrop={onDrop}
-        disabled={currentChunkIndex !== -1}
+        disabled={
+          currentChunkIndex !== -1 || progress === "Awaiting verification"
+        }
       />
       <div
         className="mt-6 flex justify-center items-center w-full"
         style={{ opacity: file.length > 0 ? 1 : 0 }}
       >
         {file.length > 0 && (
-          <div className="mr-6">
-            <p>
-              {file[0].name} - Progress: {progress}%
+          <div className="flex mr-6 items-center justify-center">
+            <p className="pr-4">
+              {file[0].name} - Progress: {progress}
             </p>
+            {progress === "Awaiting verification" && (
+              <CircularProgress size="1.3rem" />
+            )}
           </div>
         )}
         <Button

@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { FC, useMemo } from "react";
 import Image from "next/image";
 import UploadCloud from "~/public/images/cloud-upload.png";
 import { DropzoneOptions, useDropzone } from "react-dropzone";
@@ -41,14 +41,14 @@ const getStyles = (
   return dropZoneVariants(props);
 };
 
-export function DropZoneWrapper({
+export const DropZoneWrapper: FC<DropZoneWrapperProps> = ({
   accept,
   noClick,
   onDrop,
   maxFiles = 1,
   styles = "",
   disabled = false,
-}: DropZoneWrapperProps) {
+}) => {
   const { getRootProps, getInputProps, isDragAccept, isDragReject, open } =
     useDropzone({
       maxFiles,
@@ -86,4 +86,4 @@ export function DropZoneWrapper({
       <input {...getInputProps()} multiple={maxFiles !== 1} />
     </div>
   );
-}
+};
