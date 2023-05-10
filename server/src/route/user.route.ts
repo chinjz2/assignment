@@ -1,5 +1,6 @@
 import router, { Router } from "express";
 import bodyParser from "body-parser";
+import validate from "middleware/validateResource";
 import {
   createUsersHandler,
   getAllUsersHandler,
@@ -9,6 +10,7 @@ import {
   deleteUserHandler,
   uploadUsersHandler,
 } from "~/controller/user.controller";
+import { getAllUsersSchema } from "~/schema/user.schema";
 
 const routes: Router = router();
 
@@ -19,7 +21,7 @@ routes
     bodyParser.raw({ limit: "50mb", type: () => true }),
     uploadUsersHandler
   );
-routes.route("/").get(getAllUsersHandler);
+routes.route("/").get(validate(getAllUsersSchema), getAllUsersHandler);
 routes
   .route("/:id")
   .get(getOneUserHandler)

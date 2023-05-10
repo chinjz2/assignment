@@ -1,4 +1,3 @@
-import { Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "../utils/db";
 import type { User } from "@prisma/client";
 
@@ -17,35 +16,6 @@ export async function getUser(
       login: true,
       name: true,
       salary: true,
-    },
-  });
-}
-export async function getAllUsers({
-  limit,
-  offset,
-  minSalary,
-  maxSalary,
-  col,
-  order,
-}: {
-  limit: number;
-  offset: number;
-  minSalary: number;
-  maxSalary: number;
-  col: string;
-  order: string;
-}): Promise<User[]> {
-  return prisma.user.findMany({
-    skip: offset,
-    take: limit,
-    orderBy: {
-      [col]: order,
-    },
-    where: {
-      salary: {
-        lte: maxSalary,
-        gte: minSalary,
-      },
     },
   });
 }
@@ -117,15 +87,21 @@ export async function createUsers(
   time: Date
 ): Promise<number> {
   try {
-    const resp = await prisma.$transaction(async (prisma) => {
-      try {
-        const res = await processCSVFile(fileName, time, prisma);
-        return res;
-      } catch (err) {
-        await prisma.$queryRaw`ROLLBACK`;
-        return err;
+    const resp = await prisma.$transaction(
+      async (prisma) => {
+        try {
+          const res = await processCSVFile(fileName, time, prisma);
+          return res;
+        } catch (err) {
+          await prisma.$queryRaw`ROLLBACK`;
+          return err;
+        }
+      },
+      {
+        maxWait: 5000, // default: 2000
+        timeout: 20000, // default: 5000
       }
-    });
+    );
     if (resp !== "Success") return 400;
     return 200;
   } catch (err) {
@@ -163,4 +139,34 @@ export async function deleteUser(id: string): Promise<void> {
       id,
     },
   });
+}
+export async function getAllUsers(
+  offset: number,
+  limit: number,
+  whereQuery: {},
+  sortQuery: {}
+) {
+  return prisma.$transaction([
+    prisma.user.count({
+      where: {
+        ...whereQuery,
+      },
+    }),
+    prisma.user.findMany({
+      skip: offset,
+      take: limit,
+      orderBy: {
+        ...sortQuery,
+      },
+      where: {
+        ...whereQuery,
+      },
+      select: {
+        id: true,
+        login: true,
+        name: true,
+        salary: true,
+      },
+    }),
+  ]);
 }

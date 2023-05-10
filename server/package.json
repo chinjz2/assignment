@@ -23,7 +23,8 @@
     "supertest": "^6.3.3",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^4.6.2",
-    "ts-jest": "^29.1.0"
+    "ts-jest": "^29.1.0",
+    "zod": "^3.21.4"
   },
   "devDependencies": {
     "@types/cors": "^2.8.13",

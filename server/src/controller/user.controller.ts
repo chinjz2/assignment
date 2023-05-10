@@ -3,7 +3,6 @@ import {
   getUser,
   createUser,
   createUsers,
-  updateUser,
   deleteUser,
 } from "~/service/user.service";
 import {
@@ -12,6 +11,7 @@ import {
 } from "~/service/uploadStatus.service";
 import { Request, Response } from "express";
 import type { User } from "@prisma/client";
+import { GetAllUsersInput } from "~/schema/user.schema";
 
 import fs from "fs";
 import md5 from "md5";
@@ -20,9 +20,6 @@ interface uploadQueryProps {
   name: string;
   currentChunkIndex: string;
   totalChunks: string;
-  id: string;
-}
-interface queryProps {
   id: string;
 }
 const fileTimeout = 60000;
@@ -83,13 +80,12 @@ export async function createUsersHandler(req: Request, res: Response) {
     return res.sendStatus(400);
   }
 }
-export async function getAllUsersHandler(req: Request, res: Response) {}
 export async function getOneUserHandler(
-  req: Request<queryProps, {}, {}, {}>,
+  req: Request<{ id: string }, {}, {}, {}>,
   res: Response
 ) {
   try {
-    const { id }: queryProps = req.params;
+    const { id }: { id: string } = req.params;
     const resp = await getUser(id);
     res.status(200).json(resp);
   } catch (err) {
@@ -110,13 +106,53 @@ export async function createUserHandler(req: Request, res: Response) {
 export async function updateUserHandler(req: Request, res: Response) {}
 
 export async function deleteUserHandler(
-  req: Request<queryProps, {}, {}, {}>,
+  req: Request<{ id: string }, {}, {}, {}>,
   res: Response
 ) {
   try {
-    const { id }: queryProps = req.params;
+    const { id }: { id: string } = req.params;
     await deleteUser(id);
     res.sendStatus(200);
+  } catch (err) {
+    console.log("err", err);
+    return res.sendStatus(400);
+  }
+}
+export async function getAllUsersHandler(
+  req: Request<GetAllUsersInput["query"]>,
+  res: Response
+) {
+  try {
+    const { minSalary, maxSalary, offset, limit, sort } = req.query;
+    const minSalaryStr: string = (minSalary as string) || "-1";
+    const maxSalaryStr: string = (maxSalary as string) || "-1";
+    const offsetStr: string = (offset as string) || "0";
+    const limitStr: string = (limit as string) || "30";
+    const sortStr: string = (sort as string) || "";
+
+    let whereQuery = {};
+    let sortQuery = {};
+    if (minSalaryStr !== "-1") {
+      whereQuery = {
+        salary: {
+          lte: parseInt(maxSalaryStr),
+          gte: parseInt(minSalaryStr),
+        },
+      };
+    }
+    if (sortStr.length > 0) {
+      const order = sortStr[0] === "+" ? "asc" : "desc";
+      sortQuery = {
+        [`${sortStr.substring(1)}`]: order,
+      };
+    }
+    const resp = await getAllUsers(
+      parseInt(offsetStr),
+      parseInt(limitStr),
+      whereQuery,
+      sortQuery
+    );
+    res.status(200).json({ count: resp[0], data: resp[1] });
   } catch (err) {
     console.log("err", err);
     return res.sendStatus(400);
