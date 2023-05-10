@@ -1,6 +1,6 @@
 import router, { Router } from "express";
 import bodyParser from "body-parser";
-import validate from "middleware/validateResource";
+import validate from "~/middleware/validateResource";
 import {
   createUsersHandler,
   getAllUsersHandler,

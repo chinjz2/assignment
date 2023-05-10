@@ -132,7 +132,10 @@ export async function getAllUsersHandler(
 
     let whereQuery = {};
     let sortQuery = {};
-    if (minSalaryStr !== "-1") {
+    if (
+      minSalaryStr !== "-1" &&
+      parseInt(minSalaryStr) <= parseInt(maxSalaryStr)
+    ) {
       whereQuery = {
         salary: {
           lte: parseInt(maxSalaryStr),
