@@ -7,7 +7,7 @@ interface SalarySearchProps {
 }
 export const SalarySearch: FC<SalarySearchProps> = ({ onSearchClick }) => {
   const [minSalary, setMinSalary] = useState<number>(0);
-  const [maxSalary, setMaxSalary] = useState<number>(0);
+  const [maxSalary, setMaxSalary] = useState<number>(9999999);
 
   const error: boolean = minSalary > maxSalary;
   return (

@@ -1,5 +1,4 @@
-import { FC, useState, useCallback } from "react";
-import { CircularProgress } from "@mui/material";
+import { FC, useCallback } from "react";
 
 import { EmployeeData } from "~/types";
 import MUIDataTable, {
@@ -13,6 +12,7 @@ interface DataTableWrapperProps {
   data: EmployeeData;
   title: string;
   sortOrder: MUISortOptions;
+  limit: number;
 }
 const columns = ["id", "login", "name", "salary"];
 export const DataTableWrapper: FC<DataTableWrapperProps> = ({
@@ -21,6 +21,7 @@ export const DataTableWrapper: FC<DataTableWrapperProps> = ({
   data,
   title,
   sortOrder,
+  limit,
 }) => {
   const onTableChange = useCallback(
     (action: string, tableState: MUIDataTableState) => {
@@ -49,8 +50,8 @@ export const DataTableWrapper: FC<DataTableWrapperProps> = ({
     count: data.count,
     onTableChange: onTableChange,
     sortOrder: sortOrder,
-    rowsPerPage: 30,
-    rowsPerPageOptions: [30],
+    rowsPerPage: limit,
+    rowsPerPageOptions: [limit],
   };
   return (
     <div className="">

@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import { MUISortOptions } from "mui-datatables";
 import { DataTableWrapper } from "~/src/components/dataTableWrapper";
 import { SalarySearch } from "~/src/components/salarySearch";
@@ -18,8 +18,8 @@ const limit = 30;
 const getDirSymbol = (dir: string) => (dir === "asc" ? "%2B" : "-");
 export default function UploadPage() {
   const [salaryRange, setSalaryRange] = useState<SalaryRange>({
-    minSalary: -1,
-    maxSalary: -1,
+    minSalary: 0,
+    maxSalary: 9999999,
   });
   const [sortInfo, setSortInfo] = useState<MUISortOptions>({
     name: "id",
@@ -28,10 +28,16 @@ export default function UploadPage() {
   const [currentPage, setCurrentPage] = useState<number>(0);
   const [data, setData] = useState<EmployeeData>({ count: 0, data: [] });
   useEffect(() => {
-    fetch("http://localhost:3001/users")
+    fetch(
+      `http://localhost:3001/users?minSalary=${
+        salaryRange.minSalary
+      }&maxSalary=${salaryRange.maxSalary}&offset=${
+        currentPage * limit
+      }&limit=${limit}&sort=${getDirSymbol(sortInfo.direction)}${sortInfo.name}`
+    )
       .then((resp) => resp.json())
       .then((data) => setData(data));
-  }, []);
+  }, [salaryRange, currentPage, sortInfo]);
   const onSearchClick = (minSalary: number, maxSalary: number) => {
     setSalaryRange({ minSalary: minSalary, maxSalary: maxSalary });
 
@@ -67,10 +73,7 @@ export default function UploadPage() {
       .then((resp) => resp.json())
       .then((data) => setData(data));
   };
-  const salaryRangeText: string =
-    salaryRange.minSalary < 0
-      ? ""
-      : `Salary from ${salaryRange.minSalary} - ${salaryRange.maxSalary}`;
+  const salaryRangeText: string = `Salary from ${salaryRange.minSalary} - ${salaryRange.maxSalary}`;
   return (
     <main className="flex justify-center items-center bg-slate-50 min-h-screen">
       <div className="container space-y-6 bg-slate-50 py-8 dark:bg-transparent md:py-12 lg:py-24">
@@ -81,6 +84,7 @@ export default function UploadPage() {
           onPageClick={onPageClick}
           title={`Employee ${salaryRangeText}`}
           sortOrder={sortInfo}
+          limit={limit}
         />
       </div>
     </main>
