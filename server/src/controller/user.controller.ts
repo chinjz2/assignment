@@ -124,18 +124,15 @@ export async function getAllUsersHandler(
 ) {
   try {
     const { minSalary, maxSalary, offset, limit, sort } = req.query;
-    const minSalaryStr: string = (minSalary as string) || "-1";
-    const maxSalaryStr: string = (maxSalary as string) || "-1";
-    const offsetStr: string = (offset as string) || "0";
-    const limitStr: string = (limit as string) || "30";
-    const sortStr: string = (sort as string) || "";
+    const minSalaryStr: string = minSalary as string;
+    const maxSalaryStr: string = maxSalary as string;
+    const offsetStr: string = offset as string;
+    const limitStr: string = limit as string;
+    const sortStr: string = sort as string;
 
     let whereQuery = {};
     let sortQuery = {};
-    if (
-      minSalaryStr !== "-1" &&
-      parseInt(minSalaryStr) <= parseInt(maxSalaryStr)
-    ) {
+    if (parseInt(minSalaryStr) <= parseInt(maxSalaryStr)) {
       whereQuery = {
         salary: {
           lte: parseInt(maxSalaryStr),

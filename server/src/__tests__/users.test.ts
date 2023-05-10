@@ -7,23 +7,23 @@ import fs from "fs";
 const app = createServer();
 const dummyUser: User = {
   id: "dummy001",
-  login: "dummy",
+  login: "dummyB",
   name: "dummy 001",
   salary: 1000,
   createdAt: new Date(),
 };
 const dummyUser2: User = {
   id: "dummy002",
-  login: "dummy2",
+  login: "dummyA",
   name: "dummy 002",
-  salary: 10000,
+  salary: 100000,
   createdAt: new Date(),
 };
 const dummyUser3: User = {
   id: "dummy003",
-  login: "dummy3",
+  login: "dummyC",
   name: "dummy 003",
-  salary: 100000,
+  salary: 10000,
   createdAt: new Date(),
 };
 const createDummyData = async (data: User[]) => {
@@ -287,28 +287,13 @@ describe("user", () => {
     beforeEach(async () => {
       await prisma.$queryRaw`DELETE FROM User`;
     });
-    describe("given no queries in url", () => {
-      it("should fetch all entries", async () => {
-        const createMultiple: User[] = [dummyUser, dummyUser2, dummyUser3];
-        await createDummyData(createMultiple);
-        const { body, statusCode } = await supertest(app).get("/users");
-        expect(statusCode).toBe(200);
-        expect(body.count).toEqual(3);
-        body.data.forEach((element: User, idx: number) => {
-          expect(element.id).toBe(createMultiple[idx].id);
-          expect(element.login).toBe(createMultiple[idx].login);
-          expect(element.name).toBe(createMultiple[idx].name);
-          expect(element.salary).toBe(createMultiple[idx].salary);
-        });
-      });
-    });
-    describe("given minimum salary 5000 and maximum 500000 query in url", () => {
+    describe("given minimum salary 5000 and maximum 500000.100 query in url", () => {
       it("should fetch all entries within salary range", async () => {
         const createMultiple: User[] = [dummyUser, dummyUser2, dummyUser3];
         await createDummyData(createMultiple);
         const expectedRes: User[] = [dummyUser2, dummyUser3];
         const { body, statusCode } = await supertest(app).get(
-          "/users?minSalary=5000&maxSalary=500000"
+          "/users?minSalary=5000&maxSalary=500000.100&offset=0&limit=30&sort=%2Bid"
         );
         expect(statusCode).toBe(200);
         expect(body.count).toEqual(2);
@@ -325,7 +310,7 @@ describe("user", () => {
         const createMultiple: User[] = [dummyUser, dummyUser2, dummyUser3];
         await createDummyData(createMultiple);
         const { body, statusCode } = await supertest(app).get(
-          "/users?minSalary=500000&maxSalary=1"
+          "/users?minSalary=500000&maxSalary=1&offset=0&limit=30&sort=%2Bid"
         );
         expect(statusCode).toBe(200);
         expect(body.count).toEqual(3);
@@ -337,13 +322,29 @@ describe("user", () => {
         });
       });
     });
+    describe("given invalid characters as salary values in url", () => {
+      it("should return 400 instead", async () => {
+        const { statusCode } = await supertest(app).get(
+          "/users?minSalary=abhjf&maxSalary=fosaj&offset=0&limit=30&sort=%2Bid"
+        );
+        expect(statusCode).toBe(400);
+      });
+    });
+    describe("given negative as salary values in url", () => {
+      it("should return 400 instead", async () => {
+        const { statusCode } = await supertest(app).get(
+          "/users?minSalary=-1283&maxSalary=-749821&offset=0&limit=30&sort=%2Bid"
+        );
+        expect(statusCode).toBe(400);
+      });
+    });
     describe("given limit of 1 and offset of 1 query in url", () => {
       it("should fetch only dummy2", async () => {
         const createMultiple: User[] = [dummyUser, dummyUser2, dummyUser3];
         await createDummyData(createMultiple);
         const expectedRes: User[] = [dummyUser2];
         const { body, statusCode } = await supertest(app).get(
-          "/users?minSalary=1&maxSalary=9999999&offset=1&limit=1"
+          "/users?minSalary=1&maxSalary=9999999&offset=1&limit=1&sort=%2Bid"
         );
         expect(statusCode).toBe(200);
         //total 3 items, but recieve one
@@ -356,11 +357,135 @@ describe("user", () => {
         });
       });
     });
-    describe("given sort +salary query in url", () => {
-      it("should fetch all entries in ascending order of salary", async () => {
+    describe("given invalid sort column in url", () => {
+      it("should return 400", async () => {
+        const { body, statusCode } = await supertest(app).get(
+          "/users?minSalary=1&maxSalary=9999999&offset=0&limit=30&sort=%2Bwrong"
+        );
+        expect(statusCode).toBe(400);
+      });
+    });
+    describe("given sort +id query in url", () => {
+      //dummy001,dummy002,dummy003
+      it("should fetch all entries in ascending order of id", async () => {
         const createMultiple: User[] = [dummyUser, dummyUser2, dummyUser3];
         await createDummyData(createMultiple);
         const expectedRes: User[] = [dummyUser, dummyUser2, dummyUser3];
+        const { body, statusCode } = await supertest(app).get(
+          "/users?minSalary=1&maxSalary=9999999&offset=0&limit=30&sort=%2Bid"
+        );
+        expect(statusCode).toBe(200);
+        expect(body.count).toEqual(3);
+        body.data.forEach((element: User, idx: number) => {
+          expect(element.id).toBe(expectedRes[idx].id);
+          expect(element.login).toBe(expectedRes[idx].login);
+          expect(element.name).toBe(expectedRes[idx].name);
+          expect(element.salary).toBe(expectedRes[idx].salary);
+        });
+      });
+    });
+    describe("given sort -id query in url", () => {
+      ////dummy003,dummy002,dummy001
+      it("should fetch all entries in descending order of id", async () => {
+        const createMultiple: User[] = [dummyUser, dummyUser2, dummyUser3];
+        await createDummyData(createMultiple);
+        const expectedRes: User[] = [dummyUser3, dummyUser2, dummyUser];
+        const { body, statusCode } = await supertest(app).get(
+          "/users?minSalary=1&maxSalary=9999999&offset=0&limit=30&sort=-id"
+        );
+        expect(statusCode).toBe(200);
+        expect(body.count).toEqual(3);
+        body.data.forEach((element: User, idx: number) => {
+          expect(element.id).toBe(expectedRes[idx].id);
+          expect(element.login).toBe(expectedRes[idx].login);
+          expect(element.name).toBe(expectedRes[idx].name);
+          expect(element.salary).toBe(expectedRes[idx].salary);
+        });
+      });
+    });
+    describe("given sort +login query in url", () => {
+      //dummy002: dummyA, dummy001: dummyB,dummy003: dummyC
+      it("should fetch all entries in ascending order of login", async () => {
+        const createMultiple: User[] = [dummyUser, dummyUser2, dummyUser3];
+        await createDummyData(createMultiple);
+        const expectedRes: User[] = [dummyUser2, dummyUser, dummyUser3];
+        const { body, statusCode } = await supertest(app).get(
+          "/users?minSalary=1&maxSalary=9999999&offset=0&limit=30&sort=%2Blogin"
+        );
+        console.log("bodysgfsa", body);
+        expect(statusCode).toBe(200);
+        expect(body.count).toEqual(3);
+        body.data.forEach((element: User, idx: number) => {
+          expect(element.id).toBe(expectedRes[idx].id);
+          expect(element.login).toBe(expectedRes[idx].login);
+          expect(element.name).toBe(expectedRes[idx].name);
+          expect(element.salary).toBe(expectedRes[idx].salary);
+        });
+      });
+    });
+    describe("given sort -login query in url", () => {
+      //dummy003: dummyC, dummy001: dummyB, dummy002: dummyA
+      it("should fetch all entries in descending order of login", async () => {
+        const createMultiple: User[] = [dummyUser, dummyUser2, dummyUser3];
+        await createDummyData(createMultiple);
+        const expectedRes: User[] = [dummyUser3, dummyUser, dummyUser2];
+        const { body, statusCode } = await supertest(app).get(
+          "/users?minSalary=1&maxSalary=9999999&offset=0&limit=30&sort=-login"
+        );
+        expect(statusCode).toBe(200);
+        expect(body.count).toEqual(3);
+        body.data.forEach((element: User, idx: number) => {
+          expect(element.id).toBe(expectedRes[idx].id);
+          expect(element.login).toBe(expectedRes[idx].login);
+          expect(element.name).toBe(expectedRes[idx].name);
+          expect(element.salary).toBe(expectedRes[idx].salary);
+        });
+      });
+    });
+    describe("given sort +name query in url", () => {
+      //dummy001: dummy 001,dummy002: dummy002,dummy003: dummy003
+      it("should fetch all entries in ascending order of name", async () => {
+        const createMultiple: User[] = [dummyUser, dummyUser2, dummyUser3];
+        await createDummyData(createMultiple);
+        const expectedRes: User[] = [dummyUser, dummyUser2, dummyUser3];
+        const { body, statusCode } = await supertest(app).get(
+          "/users?minSalary=1&maxSalary=9999999&offset=0&limit=30&sort=%2Bname"
+        );
+        expect(statusCode).toBe(200);
+        expect(body.count).toEqual(3);
+        body.data.forEach((element: User, idx: number) => {
+          expect(element.id).toBe(expectedRes[idx].id);
+          expect(element.login).toBe(expectedRes[idx].login);
+          expect(element.name).toBe(expectedRes[idx].name);
+          expect(element.salary).toBe(expectedRes[idx].salary);
+        });
+      });
+    });
+    describe("given sort -name query in url", () => {
+      //dummy003: dummy 003,dummy 002: dummy002,dummy001: dummy 001
+      it("should fetch all entries in descending order of name", async () => {
+        const createMultiple: User[] = [dummyUser, dummyUser2, dummyUser3];
+        await createDummyData(createMultiple);
+        const expectedRes: User[] = [dummyUser3, dummyUser2, dummyUser];
+        const { body, statusCode } = await supertest(app).get(
+          "/users?minSalary=1&maxSalary=9999999&offset=0&limit=30&sort=-name"
+        );
+        expect(statusCode).toBe(200);
+        expect(body.count).toEqual(3);
+        body.data.forEach((element: User, idx: number) => {
+          expect(element.id).toBe(expectedRes[idx].id);
+          expect(element.login).toBe(expectedRes[idx].login);
+          expect(element.name).toBe(expectedRes[idx].name);
+          expect(element.salary).toBe(expectedRes[idx].salary);
+        });
+      });
+    });
+    describe("given sort +salary query in url", () => {
+      //dummy001:1000, dummy003:10000, dummy002:100000
+      it("should fetch all entries in ascending order of salary", async () => {
+        const createMultiple: User[] = [dummyUser, dummyUser2, dummyUser3];
+        await createDummyData(createMultiple);
+        const expectedRes: User[] = [dummyUser, dummyUser3, dummyUser2];
         const { body, statusCode } = await supertest(app).get(
           "/users?minSalary=1&maxSalary=9999999&offset=0&limit=30&sort=%2Bsalary"
         );
@@ -375,10 +500,11 @@ describe("user", () => {
       });
     });
     describe("given sort -salary query in url", () => {
+      //dummy002:100000, dummy003:10000, dummy001:1000
       it("should fetch all entries in descending order of salary", async () => {
         const createMultiple: User[] = [dummyUser, dummyUser2, dummyUser3];
         await createDummyData(createMultiple);
-        const expectedRes: User[] = [dummyUser3, dummyUser2, dummyUser];
+        const expectedRes: User[] = [dummyUser2, dummyUser3, dummyUser];
         const { body, statusCode } = await supertest(app).get(
           "/users?minSalary=1&maxSalary=9999999&offset=0&limit=30&sort=-salary"
         );
