@@ -19,7 +19,8 @@ model User {
 }
 
 model UploadStatus {
-  uploading Boolean @id
+  id String @id
+  uploading Boolean
   owner String
   updatedAt DateTime @updatedAt
 }

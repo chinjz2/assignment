@@ -6,9 +6,9 @@ import {
   deleteUser,
 } from "~/service/user.service";
 import {
-  getUploadStatus,
-  updateUploadStatus,
-} from "~/service/uploadStatus.service";
+  getUploadLockHandler,
+  freeUploadLockHandler,
+} from "~/controller/upload.controller";
 import { Request, Response } from "express";
 import type { User } from "@prisma/client";
 import { GetAllUsersInput } from "~/schema/user.schema";
@@ -22,8 +22,11 @@ interface uploadQueryProps {
   totalChunks: string;
   id: string;
 }
-const fileTimeout = 60000;
-
+function sleep(ms: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
 export async function uploadUsersHandler(
   req: Request<{}, {}, {}, uploadQueryProps>,
   res: Response
@@ -33,22 +36,11 @@ export async function uploadUsersHandler(
       req.query;
     const ext = name.split(".").pop();
     if (ext !== "csv") return res.sendStatus(400);
-    const uploadStatus = await getUploadStatus();
-    if (
-      !uploadStatus ||
-      (uploadStatus[0].owner !== "" &&
-        uploadStatus[0].owner !== id &&
-        new Date().getTime() - new Date(uploadStatus[0].updatedAt).getTime() <
-          fileTimeout)
-    )
-      return res.sendStatus(403);
+    const uploadStatus = await getUploadLockHandler(id);
+    if (!uploadStatus) return res.sendStatus(403);
 
-    if (uploadStatus[0].owner === "")
-      await updateUploadStatus({ flag: true, owner: id });
-
-    const firstChunk = parseInt(currentChunkIndex as string) === 0;
-    const lastChunk =
-      parseInt(currentChunkIndex as string) === parseInt(totalChunks) - 1;
+    const firstChunk = parseInt(currentChunkIndex) === 0;
+    const lastChunk = parseInt(currentChunkIndex) === parseInt(totalChunks) - 1;
 
     const data = req.body.toString().split(",")[1];
     const buffer = Buffer.from(data, "base64");
@@ -62,7 +54,7 @@ export async function uploadUsersHandler(
       const finalFilename =
         md5(Date.now().toString()).substring(0, 6) + "." + ext;
       fs.renameSync("./uploads/" + tmpFilename, "./uploads/" + finalFilename);
-      await updateUploadStatus({ flag: false, owner: "" });
+      await freeUploadLockHandler();
       res.status(200).json({ name: finalFilename });
     } else {
       res.json("ok");

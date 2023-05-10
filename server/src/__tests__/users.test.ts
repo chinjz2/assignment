@@ -1,6 +1,11 @@
 import supertest from "supertest";
 import createServer from "~/utils/server";
 import { prisma } from "~/utils/db";
+import {
+  getUploadLockHandler,
+  freeUploadLockHandler,
+  createUploadStatusHandler,
+} from "~/controller/upload.controller";
 import type { User } from "@prisma/client";
 import fs from "fs";
 
@@ -37,6 +42,12 @@ const createDummyData = async (data: User[]) => {
 describe("user", () => {
   beforeAll(async () => {
     await prisma.$connect();
+    await createUploadStatusHandler({
+      id: "main",
+      uploading: false,
+      owner: "",
+      updatedAt: new Date(),
+    });
   });
   afterAll(async () => {
     await prisma.$queryRaw`DELETE FROM User`;
@@ -257,28 +268,28 @@ describe("user", () => {
     });
     describe("given a two concurrent uploads", () => {
       it("only one should pass, the other should fail", async () => {
+        await getUploadLockHandler("hold lock");
         const buffer = Buffer.from(
           "data:application/octet-stream;base64," +
-            fs.readFileSync("./uploads/test-concurrent-upload.csv", "base64")
+            fs.readFileSync("./uploads/test-characters.csv", "base64")
         );
+        {
+          const { statusCode } = await supertest(app)
+            .post(
+              "/users/uploadUserFile?name=test-characters.csv&currentChunkIndex=0&totalChunks=1&id=0"
+            )
+            .set("Content-Type", "multipart/form-data")
+            .send(buffer);
+          expect(statusCode).toBe(403);
+        }
+        await freeUploadLockHandler();
         const { body, statusCode } = await supertest(app)
           .post(
-            "/users/uploadUserFile?name=test-concurrent-upload.csv&currentChunkIndex=0&totalChunks=1&id=0"
+            "/users/uploadUserFile?name=test-characters.csv&currentChunkIndex=0&totalChunks=1&id=0"
           )
           .set("Content-Type", "multipart/form-data")
           .send(buffer);
         expect(statusCode).toBe(200);
-        let intervalId = setInterval(() => {
-          supertest(app)
-            .post(
-              "/users/uploadUserFile?name=test-concurrent-upload.csv&currentChunkIndex=0&totalChunks=0&id=0"
-            )
-            .set("Content-Type", "multipart/form-data")
-            .send(buffer)
-            .expect(403);
-        }, 1000);
-        clearInterval(intervalId);
-
         fs.unlinkSync("./uploads/" + body.name);
       }, 10000);
     });
@@ -412,7 +423,6 @@ describe("user", () => {
         const { body, statusCode } = await supertest(app).get(
           "/users?minSalary=1&maxSalary=9999999&offset=0&limit=30&sort=%2Blogin"
         );
-        console.log("bodysgfsa", body);
         expect(statusCode).toBe(200);
         expect(body.count).toEqual(3);
         body.data.forEach((element: User, idx: number) => {
